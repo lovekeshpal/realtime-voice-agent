@@ -1,0 +1,14 @@
+{
+  "name": "realtime-voice-agent",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev --workspace=server\" \"npm run dev --workspace=client\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.0"
+  }
+}
