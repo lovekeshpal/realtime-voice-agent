@@ -40,6 +40,8 @@ h1 {
 .messages {
   max-height: 350px;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
 }
 
 .message {
@@ -47,6 +49,12 @@ h1 {
   border-radius: 12px;
   margin-bottom: 12px;
   line-height: 1.4;
+}
+
+.message.user {
+  background: #3b82f6;
+  color: white;
+  align-self: flex-end;
 }
 
 .message.ai {
