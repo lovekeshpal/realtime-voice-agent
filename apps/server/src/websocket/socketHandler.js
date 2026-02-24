@@ -1,27 +1,64 @@
+import { streamFromAI } from "../services/ai.service.js";
+
 export const handleSocket = (ws) => {
     console.log("Client connected");
 
-    ws.on("message", async (msg) => {
+    ws.on("message", async (message) => {
+        let data;
+
+        // -------------------------
+        // Safe JSON parsing
+        // -------------------------
         try {
-            const data = JSON.parse(msg.toString());
+            data = JSON.parse(message.toString());
+        } catch (err) {
+            console.error("Invalid JSON received");
+            return;
+        }
 
-            if (data.type === "text") {
-                const reply = "Hello. Real-time agent connected.";
+        // -------------------------
+        // TEXT MESSAGE FROM CLIENT
+        // -------------------------
+        if (data.type === "text") {
+            const userText = data.text;
+            if (!userText) return;
 
-                for (let char of reply) {
-                    await new Promise(r => setTimeout(r, 25));
+            console.log("User said:", userText);
+
+            try {
+                // -------------------------
+                // STREAM FROM OPENROUTER
+                // -------------------------
+                await streamFromAI(userText, (token) => {
                     ws.send(JSON.stringify({
                         type: "ai_stream",
-                        token: char
+                        token
                     }));
-                }
+                });
+
+                // streaming finished
+                ws.send(JSON.stringify({ type: "done" }));
+            } catch (err) {
+                console.error("Gemini streaming error:", err);
+
+                // fallback response (so server never crashes)
+                ws.send(
+                    JSON.stringify({
+                        type: "ai_stream",
+                        token: "⚠️ AI error. Check API key or server logs.",
+                    })
+                );
 
                 ws.send(JSON.stringify({ type: "done" }));
             }
-        } catch {
-            console.log("Binary/audio received");
         }
     });
 
-    ws.on("close", () => console.log("Disconnected"));
+    ws.on("close", () => {
+        console.log("Client disconnected");
+    });
+
+    ws.on("error", (err) => {
+        console.error("WebSocket error:", err);
+    });
 };

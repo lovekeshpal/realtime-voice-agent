@@ -5,12 +5,14 @@ import { useSpeechToText } from "./hooks/useSpeechToText";
 function App() {
   const socketRef = useRef(null);
   const streamBufferRef = useRef("");
+  const pendingQueueRef = useRef([]);
 
   const [stream, setStream] = useState("");
   const [messages, setMessages] = useState([]);
+  const [socketReady, setSocketReady] = useState(false);
 
   // ----------------------------
-  // WebSocket Setup
+  // WebSocket setup
   // ----------------------------
   useEffect(() => {
     const socket = new WebSocket("ws://localhost:3000");
@@ -18,28 +20,29 @@ function App() {
 
     socket.onopen = () => {
       console.log("WebSocket connected");
+      setSocketReady(true);
+
+      // flush queued messages
+      pendingQueueRef.current.forEach((msg) => {
+        socket.send(msg);
+      });
+      pendingQueueRef.current = [];
     };
 
     socket.onmessage = (event) => {
       const data = JSON.parse(event.data);
 
-      // Streaming AI tokens
       if (data.type === "ai_stream") {
         streamBufferRef.current += data.token;
         setStream(streamBufferRef.current);
       }
 
-      // AI finished streaming
       if (data.type === "done") {
-        const finalMessage = streamBufferRef.current;
+        const final = streamBufferRef.current;
 
         setMessages((prev) => [
           ...prev,
-          {
-            id: Date.now(),
-            role: "ai",
-            text: finalMessage,
-          },
+          { id: Date.now(), role: "ai", text: final },
         ]);
 
         streamBufferRef.current = "";
@@ -47,60 +50,49 @@ function App() {
       }
     };
 
-    socket.onerror = (err) => {
-      console.error("WebSocket error:", err);
+    socket.onclose = () => {
+      console.log("Socket closed");
+      setSocketReady(false);
     };
 
-    socket.onclose = () => {
-      console.log("WebSocket disconnected");
+    socket.onerror = (err) => {
+      console.error("WebSocket error:", err);
+      setSocketReady(false);
     };
 
     return () => socket.close();
   }, []);
 
   // ----------------------------
-  // Send Text to Server
+  // Send text safely
   // ----------------------------
   const sendTextToServer = (text) => {
-    if (!socketRef.current || socketRef.current.readyState !== WebSocket.OPEN) {
-      console.error("Socket not ready");
-      return;
+    const payload = JSON.stringify({
+      type: "text",
+      text,
+    });
+
+    // add user bubble immediately
+    setMessages((prev) => [...prev, { id: Date.now(), role: "user", text }]);
+
+    if (socketRef.current?.readyState === WebSocket.OPEN) {
+      socketRef.current.send(payload);
+    } else {
+      console.log("Socket not ready → queueing message");
+      pendingQueueRef.current.push(payload);
     }
-
-    // Add user message to UI
-    setMessages((prev) => [
-      ...prev,
-      {
-        id: Date.now(),
-        role: "user",
-        text,
-      },
-    ]);
-
-    socketRef.current.send(
-      JSON.stringify({
-        type: "text",
-        text,
-      }),
-    );
   };
 
-  // ----------------------------
-  // Manual Test Button
-  // ----------------------------
   const sendTestMessage = () => {
-    sendTextToServer("Hello");
+    sendTextToServer("Hello from button");
   };
 
   // ----------------------------
-  // Speech To Text Hook
+  // speech hook
   // ----------------------------
   const { startListening, stopListening, listening } =
     useSpeechToText(sendTextToServer);
 
-  // ----------------------------
-  // UI
-  // ----------------------------
   return (
     <div className="app">
       <div className="chat-container">
