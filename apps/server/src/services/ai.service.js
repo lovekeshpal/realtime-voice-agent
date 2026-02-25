@@ -8,11 +8,18 @@ export const streamFromAI = async (text, onToken) => {
             "Content-Type": "application/json",
         },
         body: JSON.stringify({
-            model: "mistralai/mistral-7b-instruct",
+            model: "meta-llama/llama-3.1-8b-instruct",
             messages: [
                 {
                     role: "system",
-                    content: "You are a concise AI voice assistant. Respond clearly and briefly."
+                    content: `
+You are a friendly, natural real-time voice assistant.
+Speak like a real human in conversation.
+Be concise.
+Avoid robotic phrases like "How can I assist you today?"
+Do not use emojis.
+Respond like you're talking naturally.
+`
                 },
                 {
                     role: "user",

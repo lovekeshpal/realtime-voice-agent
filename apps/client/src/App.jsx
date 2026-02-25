@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import "./App.css";
 import { useSpeechToText } from "./hooks/useSpeechToText";
+import { useSpeech } from "./hooks/useSpeech";
 
 function App() {
   const socketRef = useRef(null);
@@ -44,6 +45,9 @@ function App() {
           ...prev,
           { id: Date.now(), role: "ai", text: final },
         ]);
+
+        // 🔊 AI SPEAKS HERE
+        speak(final);
 
         streamBufferRef.current = "";
         setStream("");
@@ -90,8 +94,14 @@ function App() {
   // ----------------------------
   // speech hook
   // ----------------------------
-  const { startListening, stopListening, listening } =
-    useSpeechToText(sendTextToServer);
+  const { startListening, stopListening, listening } = useSpeechToText(
+    (text) => {
+      stop(); // stop AI voice when user speaks
+      sendTextToServer(text);
+    },
+  );
+
+  const { speak, stop } = useSpeech();
 
   return (
     <div className="app">
