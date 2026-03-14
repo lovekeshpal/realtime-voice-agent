@@ -108,9 +108,9 @@ function App() {
       <div className="chat-container">
         <h1>🎙 Realtime Voice Agent</h1>
 
-        <button className="btn" onClick={sendTestMessage}>
+        {/* <button className="btn" onClick={sendTestMessage}> 
           Test AI
-        </button>
+        </button>*/}
 
         <button className="btn" onClick={startListening}>
           {listening ? "🎙 Listening..." : "🎤 Start Talking"}
